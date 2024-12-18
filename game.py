@@ -1,8 +1,10 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class gameComponents:
     def __init__(self, num_rounds, price_history, initial_stock_price, stock_volatility, drift_rate_mean, drift_rate_std, initial_balance, position_limit, player_balance, player_inventory, bot_balance, bot_inventory):
         self.T = num_rounds             # total number of rounds
+        self.t = 1           # starting round number
         self.dt = 1                     # time step in the brownian motion simulation is 1 round
         self.S = price_history          # array of the price history 
         self.S0 = initial_stock_price   # stock price at start of the round
@@ -17,8 +19,6 @@ class gameComponents:
         self.bi = bot_inventory         # bot's inventory
     
     def generate_price(self):
-        self.S.append(self.S0)
-        
         for i in range(self.T):
             # Generate random drift component for each step
             mu = np.random.normal(self.mu_mean, self.mu_std)
@@ -34,16 +34,20 @@ class gameComponents:
     def bot_decision(self):
         ## Implement a dynamic spread based on volatility (higher volatility -> greater uncertainty -> wider spread)
         # These base prices will be adjusted later 
-        multiplier = 10
-        dynamic_spread = multiplier * self.sigma
-
+        # Spread should be tightened each round to increase likelihood of transactions
+        multiplier = 20
+        dynamic_spread = multiplier * self.sigma * ((self.T + (1- self.t)) / self.T)
+        # print(f'dynamic spread: {dynamic_spread}')
         base_bid = self.S[-1] - (dynamic_spread / 2)
         base_ask = self.S[-1] + (dynamic_spread / 2)
 
-
         ## Implement inventory-based spread adjustment to encourage trades to ensure that the inventory does not go over the limit
-        # 2 is the sensitivity of the bot to its inventory limits
-        inventory_adjustment_factor = (abs(self.bi) / self.pl) * 2
+        # 1 is the sensitivity multiplier of the bot to its inventory limits
+        inventory_sensitivity = 1
+        inventory_adjustment_factor = (self.bi / self.pl) * inventory_sensitivity
+        # print(f'inventory adjustment factor: {inventory_adjustment_factor}')
+        adjusted_bid = base_bid - (dynamic_spread / 2) * inventory_adjustment_factor
+        adjusted_ask = base_ask - (dynamic_spread / 2) * inventory_adjustment_factor
 
         ## Implement trend following to encourage trades influenced by trend analysis
         # Using a window to calculate the moving average, the trend strenght is considered
@@ -58,47 +62,49 @@ class gameComponents:
         else:
             rate_of_change = self.S[-1] - self.S[-2]
         # Calculate trend adjustment factor
+        trend_sensitivity = 5
         if moving_av != 0:
-            trend_adjustment_factor = rate_of_change / moving_av
+            trend_adjustment_factor = (rate_of_change / moving_av) * trend_sensitivity
         else:
             trend_adjustment_factor = 0
+        # print(f'trend adjustment factor: {trend_adjustment_factor}')
+        adjusted_bid += (dynamic_spread / 2) * trend_adjustment_factor
+        adjusted_ask += (dynamic_spread / 2) * trend_adjustment_factor
 
-
-        ## Combine adjustment factors
-        # Consider if bot is long (positive inventory)
-        if self.bi > 0:
-            # Upward trend - raise bid and ask to sell more aggressively
-            if rate_of_change > 0:
-                adjusted_bid = base_bid + inventory_adjustment_factor * trend_adjustment_factor
-                adjusted_ask = base_ask + inventory_adjustment_factor * trend_adjustment_factor
-            # Downward trend - lower bid and ask to avoid buying too much
-            elif rate_of_change < 0:
-                adjusted_bid = base_bid - inventory_adjustment_factor * trend_adjustment_factor
-                adjusted_ask = base_ask - inventory_adjustment_factor * trend_adjustment_factor
-            # Flat trend
-            else: 
-                adjusted_bid = base_bid
-                adjusted_ask = base_ask
-
-        # Consider if bot is short (negative inventory)
-        elif self.bi < 0:
-            # Upward trend - lower bid and ask to buy more cautiously
-            if rate_of_change > 0:
-                adjusted_bid = base_bid - inventory_adjustment_factor * trend_adjustment_factor
-                adjusted_ask = base_ask - inventory_adjustment_factor * trend_adjustment_factor
-            # Downward trend - raise bid and ask to buy back more aggressively 
-            elif rate_of_change < 0:
-                adjusted_bid = base_bid + inventory_adjustment_factor * trend_adjustment_factor
-                adjusted_ask = base_ask + inventory_adjustment_factor * trend_adjustment_factor
-            # Flat trend
-            else: 
-                adjusted_bid = base_bid
-                adjusted_ask = base_ask
+        # ## Combine adjustment factors
+        # # Consider if bot is long (positive inventory)
+        # if self.bi > 0:
+        #     # Upward trend - raise bid and ask to sell more aggressively
+        #     if rate_of_change > 0:
+        #         adjusted_bid = base_bid + (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #         adjusted_ask = base_ask + (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #     # Downward trend - lower bid and ask to avoid buying too much
+        #     elif rate_of_change < 0:
+        #         adjusted_bid = base_bid - (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #         adjusted_ask = base_ask - (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #     # Flat trend
+        #     else: 
+        #         adjusted_bid = base_bid
+        #         adjusted_ask = base_ask
+        # # Consider if bot is short (negative inventory)
+        # elif self.bi < 0:
+        #     # Upward trend - lower bid and ask to buy more cautiously
+        #     if rate_of_change > 0:
+        #         adjusted_bid = base_bid - (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #         adjusted_ask = base_ask - (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #     # Downward trend - raise bid and ask to buy back more aggressively 
+        #     elif rate_of_change < 0:
+        #         adjusted_bid = base_bid + (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #         adjusted_ask = base_ask + (dynamic_spread / 2) * (inventory_adjustment_factor + trend_adjustment_factor)
+        #     # Flat trend
+        #     else: 
+        #         adjusted_bid = base_bid
+        #         adjusted_ask = base_ask
+        # # Bot has no positions
+        # else:
+        #     adjusted_bid = base_bid
+        #     adjusted_ask = base_ask
         
-        # Bot has no positions
-        else:
-            adjusted_bid = base_bid
-            adjusted_ask = base_ask
 
         # If scalars mean bot wants to bid at a higher price or sell at a lower price, change these values to the limits
         if (adjusted_bid >= self.S[-1]):
@@ -114,6 +120,16 @@ class gameComponents:
     
     def player_decision(self):
         print(f'The current stock price is £{self.S[-1]:.2f}')
+
+        round_number = np.arange(0, len(self.S))
+        plt.plot(round_number, np.array(self.S), marker='o')
+        plt.title("Stock Price History")
+        plt.xlabel("Round Number")
+        plt.ylabel("Stock Price")
+        plt.xticks(round_number)
+        plt.grid(True)
+        plt.show()
+
         print()
 
         while True:
@@ -211,10 +227,12 @@ class gameComponents:
         print('End of round statistics:')
         print(f'Player- Balance: £{self.pb:.2f}, Inventory: {self.pi}')
         print(f'Bot- Balance: £{self.bb:.2f}, Inventory: {self.bi}')
+        self.t += 1
         
     def game(self):
+        self.S.append(self.S0)
         for i in range(self.T):
-            print(f'---------- Round number {i + 1}/{self.T} ----------')
+            print(f'---------- Round number {self.t}/{self.T} ----------')
             current_price = self.generate_price()
             self.S.append(current_price)
             self.single_round()
@@ -228,7 +246,45 @@ class gameComponents:
         print(f'Player- Balance: £{self.pb:.2f}, Inventory: {self.pi}')
         print(f'Bot- Balance: £{self.bb:.2f}, Inventory: {self.bi}')
         print()
+
+        current_price = self.generate_price()
+        self.S.append(current_price)
+        print(f'The final stock price is £{self.S[-1]:.2f}')
+        round_number = np.arange(0, len(self.S))
+        plt.plot(round_number, np.array(self.S), marker='o')
+        plt.title("Stock Price History")
+        plt.xlabel("Round Number")
+        plt.ylabel("Stock Price")
+        plt.xticks(round_number)
+        plt.grid(True)
+        plt.show()
+        print()
+        # Force liquidation
+        self.pb += self.pi * self.S[-1]
+        self.bb += self.bi * self.S[-1]
+        # Player liquidation
+        if (self.pi > 0):
+            print(f'You are long on {self.pi} position(s). Therefore, you are forced to sell {self.pi} unit(s) at £{self.S[-1]:.2f}')
+        elif (self.pi < 0):
+            print(f'You are short on {self.pi} position(s). Therefore, you are forced to buy {self.pi} unit(s) at £{self.S[-1]:.2f}')
+        else:
+            print(f'Your inventory is neutral. Therefore, no forced liquidation occurs.')
+        print(f'Your final balance is £{self.pb:.2f}')
+        print()
+        
+        # Bot liquidation
+        if (self.bi > 0):
+            print(f'The bot is long on {self.bi} position(s). Therefore, you are forced to sell {self.bi} unit(s) at £{self.S[-1]:.2f}')
+        elif (self.bi < 0):
+            print(f'The bot is short on {self.bi} position(s). Therefore, you are forced to buy {self.bi} unit(s) at £{self.S[-1]:.2f}')
+        else:
+            print(f"The bot's inventory is neutral. Therefore, no forced liquidation occurs.")
+        print(f"The bot's final balance is £{self.bb:.2f}")
+        print()
+
         profit = self.pb - self.ib
+        round(self.pb, 2)
+        round(self.bb, 2)
         if (profit > 0):
             if (self.pb > self.bb):
                 print(f'Congratulations! You beat the bot and made a profit of £{profit:.2f}.')

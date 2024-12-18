@@ -1,6 +1,7 @@
 from game import *
 
 print('The aim of the game is to make more money than a bot through buying and selling the same stock.')
+print()
 print('You and the bot start on the same balance and each round the stock price changes.')
 print('At the start of each round, you will offer a bid and ask price.')
 print('You must always bid at a price lower than the market price and ask higher than the market (to make profit).')
@@ -10,8 +11,11 @@ print('At the end of each round, your balance and inventory will be updated.')
 print('Going long on a position increases your inventory by 1. Going short on a position decreases your inventory by 1.')
 print('Players must make sure that their inventory does not exceed the maximum number of long or short positions.')
 print('If your inventory does exceed the limit, you will be forced to buy/sell a unit at an unfavourable price.')
-print('The price is modelled using geometric brownian motion (a Gaussian distribution) with random drift. The stock price also incorporates volatility, simulating the real world.')
-print('The amount of volatility determines how difficult the game is.')
+print('At the end of the game, you will be forced to buy/sell so that you have a neutral inventory.')
+print()
+print('The price is modelled using geometric brownian motion (a Gaussian distribution) with random drift.')
+print('The price of a single unit starts at £10.00')
+print('The stock price also incorporates volatility, simulating the real world. The amount of volatility determines how difficult the game is.')
 print()
 input('Type enter to start the game.')
 print()
@@ -22,13 +26,13 @@ while True:
     try:
         difficulty = int(input('Difficulty: '))
         if difficulty == 1:
-            stock_volatility = 0.05
-            break
-        elif difficulty == 2:
             stock_volatility = 0.1
             break
+        elif difficulty == 2:
+            stock_volatility = 0.25
+            break
         elif difficulty == 3:
-            stock_volatility = 0.15
+            stock_volatility = 0.5
             break
         else:
             print('You must enter one of the integer values 1, 2 or 3.')      
