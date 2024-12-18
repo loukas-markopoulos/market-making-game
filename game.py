@@ -30,10 +30,11 @@ class gameComponents:
         
         return round(St, 2)
     
+
     def bot_decision(self):
         ## Implement a dynamic spread based on volatility (higher volatility -> greater uncertainty -> wider spread)
         # These base prices will be adjusted later 
-        multiplier = 2
+        multiplier = 10
         dynamic_spread = multiplier * self.sigma
 
         base_bid = self.S[-1] - (dynamic_spread / 2)
@@ -41,8 +42,8 @@ class gameComponents:
 
 
         ## Implement inventory-based spread adjustment to encourage trades to ensure that the inventory does not go over the limit
-        # 0.1 is the sensitivity of the bot
-        inventory_adjustment_factor = (abs(self.bi) / self.pl) * 0.1
+        # 2 is the sensitivity of the bot to its inventory limits
+        inventory_adjustment_factor = (abs(self.bi) / self.pl) * 2
 
         ## Implement trend following to encourage trades influenced by trend analysis
         # Using a window to calculate the moving average, the trend strenght is considered
@@ -98,6 +99,13 @@ class gameComponents:
         else:
             adjusted_bid = base_bid
             adjusted_ask = base_ask
+
+        # If scalars mean bot wants to bid at a higher price or sell at a lower price, change these values to the limits
+        if (adjusted_bid >= self.S[-1]):
+            adjusted_bid = self.S[-1] - 0.01
+        
+        if (adjusted_ask <= self.S[-1]):
+            adjusted_ask = self.S[-1] + 0.01
         
         bid = round(adjusted_bid, 2)
         ask = round(adjusted_ask, 2)
@@ -143,8 +151,9 @@ class gameComponents:
             buy_price = 1.4 * self.S[-1]
             new_balance = balance - buy_price
             new_inventory = inventory + 1
-            print(f'Message to {character}')
+            print(f'Message to {character}:')
             print(f'You are short on too many positions. You are forced to buy at 40% over the current market price ({buy_price}).')
+            print()
             return round(new_balance, 2), round(new_inventory, 2)
         # Not exceeding position limit
         else:
@@ -181,13 +190,13 @@ class gameComponents:
         print(f'Ask prices - Player: £{player_ask:.2f}, Bot: £{bot_ask:.2f}')
         # Player asks lower than bot
         if (player_ask < bot_ask):
-            print('Player has asked for a lower price than bot and sells a single asset.')
+            print('Player has asked for a lower price than the bot and sells a single asset.')
             print(f"Player's inventory decreases by 1 and player's balance increases by £{player_ask:.2f}")
             self.pb += player_ask
             self.pi -= 1
         # Bot asks lower than player
         elif (bot_ask < player_ask):
-            print('Bot has asked for a lower price than player and sells a single asset.')
+            print('Bot has asked for a lower price than the player and sells a single asset.')
             print(f"Bot's inventory decreases by 1 and bot's balance increases by £{bot_ask:.2f}")
             self.bb += bot_ask
             self.bi -= 1
