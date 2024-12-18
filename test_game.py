@@ -14,7 +14,7 @@ print('If your inventory does exceed the limit, you will be forced to buy/sell a
 print('At the end of the game, you will be forced to buy/sell so that you have a neutral inventory.')
 print()
 print('The price is modelled using geometric brownian motion (a Gaussian distribution) with random drift.')
-print('The price of a single unit starts at £10.00')
+print('The price of a single unit starts at £10.00.')
 print('The stock price also incorporates volatility, simulating the real world. The amount of volatility determines how difficult the game is.')
 print()
 input('Type enter to start the game.')
@@ -51,7 +51,7 @@ initial_stock_price = 10
 drift_rate_mean = 0.02
 drift_rate_std = 0.01
 position_limit = num_rounds - 2
-initial_balance = initial_stock_price * (num_rounds + 2)
+initial_balance = initial_stock_price * (num_rounds)
 player_balance = initial_balance
 bot_balance = initial_balance
 player_inventory = 0
@@ -63,4 +63,3 @@ print()
 game = gameComponents(num_rounds, price_history, initial_stock_price, stock_volatility, drift_rate_mean, drift_rate_std, initial_balance, position_limit, player_balance, player_inventory, bot_balance, bot_inventory)
 
 game.game()
-    

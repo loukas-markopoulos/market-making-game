@@ -35,7 +35,7 @@ class gameComponents:
         ## Implement a dynamic spread based on volatility (higher volatility -> greater uncertainty -> wider spread)
         # These base prices will be adjusted later 
         # Spread should be tightened each round to increase likelihood of transactions
-        multiplier = 20
+        multiplier = 10
         dynamic_spread = multiplier * self.sigma * ((self.T + (1- self.t)) / self.T)
         # print(f'dynamic spread: {dynamic_spread}')
         base_bid = self.S[-1] - (dynamic_spread / 2)
@@ -159,7 +159,7 @@ class gameComponents:
             new_balance = balance + sale_price
             new_inventory = inventory - 1
             print(f'Message to {character}')
-            print(f'You are long on too many positions. You are forced to sell at 40% under the current market price ({sale_price}).')
+            print(f'You are long on too many positions. You are forced to sell at 40% under the current market price (£{sale_price:.2f}).')
             return round(new_balance, 2), round(new_inventory, 2)
         # Short on too many posititons
         if (inventory < (-self.pl)):
@@ -168,7 +168,7 @@ class gameComponents:
             new_balance = balance - buy_price
             new_inventory = inventory + 1
             print(f'Message to {character}:')
-            print(f'You are short on too many positions. You are forced to buy at 40% over the current market price ({buy_price}).')
+            print(f'You are short on too many positions. You are forced to buy at 40% over the current market price (£{buy_price:.2f}).')
             print()
             return round(new_balance, 2), round(new_inventory, 2)
         # Not exceeding position limit
@@ -266,7 +266,7 @@ class gameComponents:
         if (self.pi > 0):
             print(f'You are long on {self.pi} position(s). Therefore, you are forced to sell {self.pi} unit(s) at £{self.S[-1]:.2f}')
         elif (self.pi < 0):
-            print(f'You are short on {self.pi} position(s). Therefore, you are forced to buy {self.pi} unit(s) at £{self.S[-1]:.2f}')
+            print(f'You are short on {abs(self.pi)} position(s). Therefore, you are forced to buy {abs(self.pi)} unit(s) at £{self.S[-1]:.2f}')
         else:
             print(f'Your inventory is neutral. Therefore, no forced liquidation occurs.')
         print(f'Your final balance is £{self.pb:.2f}')
@@ -274,9 +274,9 @@ class gameComponents:
         
         # Bot liquidation
         if (self.bi > 0):
-            print(f'The bot is long on {self.bi} position(s). Therefore, you are forced to sell {self.bi} unit(s) at £{self.S[-1]:.2f}')
+            print(f'The bot is long on {self.bi} position(s). Therefore, the bot is forced to sell {self.bi} unit(s) at £{self.S[-1]:.2f}')
         elif (self.bi < 0):
-            print(f'The bot is short on {self.bi} position(s). Therefore, you are forced to buy {self.bi} unit(s) at £{self.S[-1]:.2f}')
+            print(f'The bot is short on {self.bi} position(s). Therefore, the bot is forced to buy {abs(self.bi)} unit(s) at £{self.S[-1]:.2f}')
         else:
             print(f"The bot's inventory is neutral. Therefore, no forced liquidation occurs.")
         print(f"The bot's final balance is £{self.bb:.2f}")
